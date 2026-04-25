@@ -1,4 +1,4 @@
-package main
+package storage
 
 import (
 	"encoding/json"
@@ -19,9 +19,11 @@ var ConnectionExists = errors.New("connection with name already exists")
 var ConnectionNotExists = errors.New("connection with name does not exist")
 
 type Record struct {
-	id            string
-	name          string
-	connectionCmd string
+	ID      string
+	Name    string
+	Address string
+	Port    int
+	User    string
 }
 
 type Storage struct {
@@ -54,15 +56,15 @@ func NewStorage(storePath string) (*Storage, error) {
 	return &Storage{db: db}, nil
 }
 
-func (s *Storage) records() ([]Record, error) {
+func (s *Storage) Records() ([]Record, error) {
 	var records []Record
 	err := s.db.View(func(tx *bbolt.Tx) error {
-		b := tx.Bucket([]byte(RECORDS_BACKET))
-		if b == nil {
+		recordsBucket := tx.Bucket([]byte(RECORDS_BACKET))
+		if recordsBucket == nil {
 			return RecordBucketNotFound
 		}
 
-		return b.ForEach(func(k, v []byte) error {
+		return recordsBucket.ForEach(func(k, v []byte) error {
 			var r Record
 			if err := json.Unmarshal(v, &r); err != nil {
 				return err
@@ -75,92 +77,93 @@ func (s *Storage) records() ([]Record, error) {
 	return records, err
 }
 
-func (s *Storage) create(name, connectionCmd string) error {
+func (s *Storage) Create(name, address, user string, port int) error {
 	return s.db.Update(func(tx *bbolt.Tx) error {
-		recordsB := tx.Bucket([]byte(RECORDS_BACKET))
-		if recordsB == nil {
+		recordsBucket := tx.Bucket([]byte(RECORDS_BACKET))
+		if recordsBucket == nil {
 			return RecordBucketNotFound
 		}
 
-		indexB := tx.Bucket([]byte(INDEX_BUCKET))
-		if indexB == nil {
+		indexBucket := tx.Bucket([]byte(INDEX_BUCKET))
+		if indexBucket == nil {
 			return IndexBucketNotFound
 		}
 
-		if v := indexB.Get([]byte(name)); v != nil {
+		if v := indexBucket.Get([]byte(name)); v != nil {
 			return ConnectionExists
 		}
 
 		k := uuid.New()
-		v, err := json.Marshal(Record{
-			id:            k.String(),
-			name:          name,
-			connectionCmd: connectionCmd,
-		})
+		r := Record{
+			ID:      k.String(),
+			Name:    name,
+			Address: address,
+			Port:    port,
+			User:    user,
+		}
+		v, err := json.Marshal(r)
 		if err != nil {
 			return err
 		}
-
-		if err := recordsB.Put([]byte(k.String()), v); err != nil {
+		if err := recordsBucket.Put([]byte(k.String()), v); err != nil {
 			return err
 		}
 
-		return indexB.Put([]byte(name), []byte(k.String()))
+		return indexBucket.Put([]byte(name), []byte(k.String()))
 	})
 }
 
-func (s *Storage) update(name, connectionCmd string) error {
-	return s.db.Update(func(tx *bbolt.Tx) error {
-		recordB := tx.Bucket([]byte(RECORDS_BACKET))
-		if recordB == nil {
-			return RecordBucketNotFound
+func (s *Storage) Find(name string) (Record, error) {
+	var record Record
+	err := s.db.View(func(tx *bbolt.Tx) error {
+		recordBucket := tx.Bucket([]byte(RECORDS_BACKET))
+		if recordBucket == nil {
+			return nil
 		}
 
-		indexB := tx.Bucket([]byte(INDEX_BUCKET))
-		if indexB == nil {
+		indexBucket := tx.Bucket([]byte(INDEX_BUCKET))
+		if indexBucket == nil {
 			return IndexBucketNotFound
 		}
 
-		id := indexB.Get([]byte(name))
+		id := indexBucket.Get([]byte(name))
 		if id == nil {
 			return ConnectionNotExists
 		}
 
-		record := recordB.Get(id)
-		if record == nil {
-			return ConnectionNotExists
-		}
-
-		return recordB.Put(id, []byte(connectionCmd))
-	})
-}
-
-func (s *Storage) find(name string) (Record, error) {
-	var record Record
-	err := s.db.View(func(tx *bbolt.Tx) error {
-		b := tx.Bucket([]byte(RECORDS_BACKET))
-		if b == nil {
-			return nil
-		}
-		v := b.Get([]byte(name))
+		v := recordBucket.Get(id)
 		if v == nil {
 			return ErrNotFound
 		}
-		record = Record{
-			name:          name,
-			connectionCmd: string(v),
+		if err := json.Unmarshal(v, &record); err != nil {
+			return err
 		}
 		return nil
 	})
 	return record, err
 }
 
-func (s *Storage) delete(name string) error {
+func (s *Storage) Delete(name string) error {
 	return s.db.Update(func(tx *bbolt.Tx) error {
-		b := tx.Bucket([]byte(RECORDS_BACKET))
-		if b == nil {
+		recordBucket := tx.Bucket([]byte(RECORDS_BACKET))
+		if recordBucket == nil {
 			return nil
 		}
-		return b.Delete([]byte(name))
+
+		indexBucket := tx.Bucket([]byte(INDEX_BUCKET))
+		if indexBucket == nil {
+			return IndexBucketNotFound
+		}
+
+		id := indexBucket.Get([]byte(name))
+		if id == nil {
+			return ConnectionNotExists
+		}
+
+		if err := recordBucket.Delete(id); err != nil {
+			return err
+		}
+
+		return indexBucket.Delete([]byte(name))
 	})
 }

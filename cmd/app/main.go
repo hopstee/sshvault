@@ -4,6 +4,8 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"sshvault/internal/cmd"
+	"sshvault/internal/storage"
 )
 
 const APP_NAME = "sshvault"
@@ -15,14 +17,14 @@ func main() {
 		os.Exit(1)
 	}
 
-	storage, err := NewStorage(storePath)
+	storage, err := storage.NewStorage(storePath)
 	if err != nil {
 		slog.Error("failed to init db", "err", err)
 		os.Exit(1)
 	}
 
-	cmd := NewCommand(storage)
-	if err := cmd.cmd.Execute(); err != nil {
+	c := cmd.NewCommand(storage)
+	if err := c.Cmd.Execute(); err != nil {
 		slog.Error("failed to execute command", "err", err)
 		os.Exit(1)
 	}

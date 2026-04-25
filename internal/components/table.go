@@ -2,8 +2,9 @@ package components
 
 import (
 	"fmt"
-	"sshvault/internal/storage"
-	"sshvault/internal/utils"
+
+	"github.com/hopstee/sshvault/internal/storage"
+	"github.com/hopstee/sshvault/internal/utils"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/lipgloss/table"

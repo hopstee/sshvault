@@ -5,11 +5,12 @@ import (
 	"log/slog"
 	"os"
 	"os/exec"
-	"sshvault/internal/components"
-	"sshvault/internal/storage"
-	"sshvault/internal/utils"
 	"strconv"
 	"sync"
+
+	"github.com/hopstee/sshvault/internal/components"
+	"github.com/hopstee/sshvault/internal/storage"
+	"github.com/hopstee/sshvault/internal/utils"
 
 	"github.com/spf13/cobra"
 )

@@ -4,8 +4,9 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"sshvault/internal/cmd"
-	"sshvault/internal/storage"
+
+	"github.com/hopstee/sshvault/internal/cmd"
+	"github.com/hopstee/sshvault/internal/storage"
 )
 
 const APP_NAME = "sshvault"

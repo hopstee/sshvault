@@ -25,19 +25,31 @@ var rootCmd = &cobra.Command{
 	Long:  `SSH Vault is a usefull CLI for managing your SSH connections. You can store and run your SSH keys from a central location.`,
 }
 
-func NewCommand(s *storage.Storage) *Command {
+func NewCommand(s *storage.Storage, version string) *Command {
 	cmd := &Command{
 		Cmd: rootCmd,
 		wg:  &sync.WaitGroup{},
 	}
-	cmd.newAddCmd(s)
-	cmd.newListCmd(s)
-	cmd.newDeleteCmd(s)
-	cmd.newConnectCmd(s)
+	cmd.versionCmd(version)
+	cmd.addCmd(s)
+	cmd.listCmd(s)
+	cmd.deleteCmd(s)
+	cmd.connectCmd(s)
 	return cmd
 }
 
-func (c *Command) newAddCmd(s *storage.Storage) {
+func (c *Command) versionCmd(version string) {
+	cmd := &cobra.Command{
+		Use:   "version",
+		Short: "Print the version of SSH Vault",
+		Run: func(cmd *cobra.Command, args []string) {
+			fmt.Println(version)
+		},
+	}
+	c.Cmd.AddCommand(cmd)
+}
+
+func (c *Command) addCmd(s *storage.Storage) {
 	var name, address, user string
 	var port int
 
@@ -63,7 +75,7 @@ func (c *Command) newAddCmd(s *storage.Storage) {
 	c.Cmd.AddCommand(cmd)
 }
 
-func (c *Command) newListCmd(s *storage.Storage) {
+func (c *Command) listCmd(s *storage.Storage) {
 	var withPing bool
 	cmd := &cobra.Command{
 		Use:   "list",
@@ -96,40 +108,42 @@ func (c *Command) newListCmd(s *storage.Storage) {
 	c.Cmd.AddCommand(cmd)
 }
 
-func (c *Command) newDeleteCmd(s *storage.Storage) {
-	var name string
-
-	cmd := &cobra.Command{
-		Use:   "delete",
-		Short: "Delete an SSH connection",
+func (c *Command) deleteCmd(s *storage.Storage) {
+	c.Cmd.AddCommand(&cobra.Command{
+		Use:                   "delete [name]",
+		Short:                 "Delete an SSH connection",
+		Args:                  cobra.ExactArgs(1),
+		DisableFlagsInUseLine: true,
 		Run: func(cmd *cobra.Command, args []string) {
+			name := args[0]
 			if err := s.Delete(name); err != nil {
 				slog.Error("failed to delete connection", "err", err)
 				return
 			}
 			slog.Info("Connection successfully deleted")
 		},
-	}
-
-	cmd.Flags().StringVarP(&name, "name", "n", "", "Name of connaction")
-	cmd.MarkFlagRequired("name")
-	c.Cmd.AddCommand(cmd)
+	})
 }
 
-func (c *Command) newConnectCmd(s *storage.Storage) {
-	var name string
-
-	cmd := &cobra.Command{
-		Use:   "connect",
-		Short: "Connect to an SSH connection",
+func (c *Command) connectCmd(s *storage.Storage) {
+	c.Cmd.AddCommand(&cobra.Command{
+		Use:                   "connect [name]",
+		Short:                 "Connect to an SSH connection",
+		Args:                  cobra.ExactArgs(1),
+		DisableFlagsInUseLine: true,
 		Run: func(cmd *cobra.Command, args []string) {
+			name := args[0]
 			conn, err := s.Find(name)
 			if err != nil {
 				slog.Error("failed to find connection", "err", err)
 				return
 			}
 
-			sshCmd := exec.Command("ssh", "-p", strconv.Itoa(conn.Port), conn.User, "@", conn.Address)
+			sshCmd := exec.Command(
+				"ssh",
+				"-p", strconv.Itoa(conn.Port),
+				fmt.Sprintf("%s@%s", conn.User, conn.Address),
+			)
 
 			sshCmd.Stdin = os.Stdin
 			sshCmd.Stdout = os.Stdout
@@ -139,9 +153,5 @@ func (c *Command) newConnectCmd(s *storage.Storage) {
 				slog.Error("ssh failed", "err", err)
 			}
 		},
-	}
-
-	cmd.Flags().StringVarP(&name, "name", "n", "", "Name of connection")
-	cmd.MarkFlagRequired("name")
-	c.Cmd.AddCommand(cmd)
+	})
 }

@@ -12,11 +12,11 @@ import (
 
 var upStatusStyle = lipgloss.NewStyle().
 	Bold(true).
-	Foreground(lipgloss.Color("29"))
+	Foreground(ColorSuccess)
 
 var downStatusStyle = lipgloss.NewStyle().
 	Bold(true).
-	Foreground(lipgloss.Color("124"))
+	Foreground(ColorError)
 
 func ConnectionsTable(conns []storage.Record, withStatus bool, statuses map[string]utils.PingStatus) string {
 	t := table.New()
@@ -31,14 +31,16 @@ func ConnectionsTable(conns []storage.Record, withStatus bool, statuses map[stri
 			base := lipgloss.NewStyle().
 				Padding(0, 2)
 			if row == -1 {
-				return base.Bold(true).Foreground(lipgloss.Color("61"))
+				// return base.Bold(true).Foreground(lipgloss.Color("61"))
+				return base.Bold(true).Foreground(ColorAccent)
 			}
 			if col == 1 && row != -1 {
-				return base.Foreground(lipgloss.Color("239"))
+				// return base.Foreground(lipgloss.Color("239"))
+				return base.Foreground(ColorMuted)
 			}
 			return lipgloss.NewStyle().
 				Padding(0, 2).
-				Foreground(lipgloss.Color("244"))
+				Foreground(ColorPrimary)
 		})
 
 	for _, conn := range conns {

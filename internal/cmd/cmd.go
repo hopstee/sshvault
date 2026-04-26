@@ -18,6 +18,7 @@ import (
 type Command struct {
 	Cmd *cobra.Command
 	wg  *sync.WaitGroup
+	mu  *sync.Mutex
 }
 
 var rootCmd = &cobra.Command{
@@ -30,6 +31,7 @@ func NewCommand(s *storage.Storage, version string) *Command {
 	cmd := &Command{
 		Cmd: rootCmd,
 		wg:  &sync.WaitGroup{},
+		mu:  &sync.Mutex{},
 	}
 	cmd.versionCmd(version)
 	cmd.addCmd(s)
@@ -89,17 +91,27 @@ func (c *Command) listCmd(s *storage.Storage) {
 			}
 
 			statuses := make(map[string]utils.PingStatus)
+			semaphore := make(chan struct{}, 15)
 			done := make(chan bool)
 			if withPing {
-				c.wg.Go(func() {
+				spinnerWg := sync.WaitGroup{}
+				spinnerWg.Go(func() {
 					components.Spinner(done)
 				})
 				for _, conn := range conns {
-					host := fmt.Sprintf("%s:%d", conn.Address, conn.Port)
-					statuses[conn.ID] = utils.PingHost(host)
+					c.wg.Go(func() {
+						semaphore <- struct{}{}
+						defer func() { <-semaphore }()
+
+						host := fmt.Sprintf("%s:%d", conn.Address, conn.Port)
+						c.mu.Lock()
+						statuses[conn.ID] = utils.PingHost(host)
+						c.mu.Unlock()
+					})
 				}
-				close(done)
 				c.wg.Wait()
+				close(done)
+				spinnerWg.Wait()
 			}
 			fmt.Println(components.ConnectionsTable(conns, withPing, statuses))
 		},

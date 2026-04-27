@@ -10,7 +10,7 @@ import (
 )
 
 const APP_NAME = "sshvault"
-const VERSION = "0.1.0"
+const VERSION = "0.1.5"
 
 func main() {
 	storePath, err := getLocalStorePath(APP_NAME)

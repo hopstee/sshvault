@@ -3,10 +3,24 @@ package components
 import "github.com/charmbracelet/lipgloss"
 
 var (
-	ColorPrimary = lipgloss.Color("255")
-	ColorMuted   = lipgloss.Color("244")
-	ColorAccent  = lipgloss.Color("110")
-	ColorBorder  = lipgloss.Color("240")
-	ColorError   = lipgloss.Color("203")
-	ColorSuccess = lipgloss.Color("114")
+	ColorPrimary = lipgloss.AdaptiveColor{
+		Light: "0",
+		Dark:  "255",
+	}
+	ColorMuted = lipgloss.AdaptiveColor{
+		Light: "240",
+		Dark:  "245",
+	}
+	ColorAccent = lipgloss.AdaptiveColor{
+		Light: "32",
+		Dark:  "110",
+	}
+	ColorError = lipgloss.AdaptiveColor{
+		Light: "9",
+		Dark:  "203",
+	}
+	ColorSuccess = lipgloss.AdaptiveColor{
+		Light: "10",
+		Dark:  "114",
+	}
 )

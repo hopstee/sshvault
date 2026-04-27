@@ -49,9 +49,11 @@ func ConnectionsTable(conns []storage.Record, withStatus bool, statuses map[stri
 			status := statuses[conn.ID]
 			switch status {
 			case utils.PingUp:
-				t = t.Row(conn.Name, cmd, upStatusStyle.Render(string(status)))
+				statusText := fmt.Sprintf("%s %s", status, ArrowUp)
+				t = t.Row(conn.Name, cmd, upStatusStyle.Render(statusText))
 			case utils.PingDown:
-				t = t.Row(conn.Name, cmd, downStatusStyle.Render(string(status)))
+				statusText := fmt.Sprintf("%s %s", status, ArrowDown)
+				t = t.Row(conn.Name, cmd, downStatusStyle.Render(statusText))
 			default:
 				t = t.Row(conn.Name, cmd, string(status))
 			}

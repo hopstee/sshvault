@@ -10,20 +10,12 @@ import (
 	"github.com/charmbracelet/lipgloss/table"
 )
 
-var upStatusStyle = lipgloss.NewStyle().
-	Bold(true).
-	Foreground(ColorSuccess)
-
-var downStatusStyle = lipgloss.NewStyle().
-	Bold(true).
-	Foreground(ColorError)
-
 func ConnectionsTable(conns []storage.Record, withStatus bool, statuses map[string]utils.PingStatus) string {
 	t := table.New()
 	if withStatus {
-		t.Headers("Name", "Connection", "Status")
+		t.Headers("Name", "Connection", "Auth Type", "Status")
 	} else {
-		t.Headers("Name", "Connection")
+		t.Headers("Name", "Connection", "Auth Type")
 	}
 
 	t.Border(lipgloss.RoundedBorder()).
@@ -45,20 +37,29 @@ func ConnectionsTable(conns []storage.Record, withStatus bool, statuses map[stri
 
 	for _, conn := range conns {
 		cmd := fmt.Sprintf("ssh %s@%s -p %d", conn.User, conn.Address, conn.Port)
+
+		name := conn.Name
+		authType := mutedText.Render("unknown")
+		if conn.AuthType != "" {
+			authType = string(conn.AuthType)
+		}
+
 		if withStatus {
+			var statusFormattedTest string
+
 			status := statuses[conn.ID]
 			switch status {
 			case utils.PingUp:
 				statusText := fmt.Sprintf("%s %s", status, ArrowUp)
-				t = t.Row(conn.Name, cmd, upStatusStyle.Render(statusText))
+				statusFormattedTest = upStatusStyle.Render(statusText)
 			case utils.PingDown:
 				statusText := fmt.Sprintf("%s %s", status, ArrowDown)
-				t = t.Row(conn.Name, cmd, downStatusStyle.Render(statusText))
-			default:
-				t = t.Row(conn.Name, cmd, string(status))
+				statusFormattedTest = downStatusStyle.Render(statusText)
 			}
+
+			t = t.Row(name, cmd, authType, statusFormattedTest)
 		} else {
-			t = t.Row(conn.Name, cmd)
+			t = t.Row(name, cmd, authType)
 		}
 	}
 

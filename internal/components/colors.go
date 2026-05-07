@@ -24,3 +24,14 @@ var (
 		Dark:  "114",
 	}
 )
+
+var upStatusStyle = lipgloss.NewStyle().
+	Bold(true).
+	Foreground(ColorSuccess)
+
+var downStatusStyle = lipgloss.NewStyle().
+	Bold(true).
+	Foreground(ColorError)
+
+var mutedText = lipgloss.NewStyle().
+	Foreground(ColorMuted)

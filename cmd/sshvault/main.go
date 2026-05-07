@@ -10,7 +10,7 @@ import (
 )
 
 const APP_NAME = "sshvault"
-const VERSION = "0.1.5"
+const VERSION = "0.2.0"
 
 func main() {
 	storePath, err := getLocalStorePath(APP_NAME)
@@ -19,13 +19,15 @@ func main() {
 		os.Exit(1)
 	}
 
+	keyring := storage.NewKeyring(APP_NAME)
+
 	storage, err := storage.NewStorage(storePath)
 	if err != nil {
 		slog.Error("failed to init db", "err", err)
 		os.Exit(1)
 	}
 
-	c := cmd.NewCommand(storage, VERSION)
+	c := cmd.NewCommand(storage, keyring, VERSION)
 	if err := c.Cmd.Execute(); err != nil {
 		slog.Error("failed to execute command", "err", err)
 		os.Exit(1)

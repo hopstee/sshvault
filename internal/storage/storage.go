@@ -12,18 +12,33 @@ import (
 const RECORDS_BACKET = "records"
 const INDEX_BUCKET = "names_index"
 
-var ErrNotFound = errors.New("record not found")
-var RecordBucketNotFound = errors.New("record bucket not found")
-var IndexBucketNotFound = errors.New("index bucket not found")
-var ConnectionExists = errors.New("connection with name already exists")
-var ConnectionNotExists = errors.New("connection with name does not exist")
+var (
+	ErrNotFound          = errors.New("record not found")
+	RecordBucketNotFound = errors.New("record bucket not found")
+	IndexBucketNotFound  = errors.New("index bucket not found")
+	ConnectionExists     = errors.New("connection with name already exists")
+	ConnectionNotExists  = errors.New("connection with name does not exist")
+)
+
+type AuthType string
+
+const (
+	PasswordAuth AuthType = "password"
+	KeyAuth      AuthType = "sshkey"
+	AgentAuth    AuthType = "agent"
+)
 
 type Record struct {
-	ID      string
-	Name    string
-	Address string
-	Port    int
-	User    string
+	ID          string
+	Name        string
+	Address     string
+	Port        int
+	User        string
+	AuthType    AuthType
+	PathToKey   string
+	PasswordKey string
+	// TODO: add tags for classifications
+	// Tags []string
 }
 
 type Storage struct {
@@ -77,7 +92,7 @@ func (s *Storage) Records() ([]Record, error) {
 	return records, err
 }
 
-func (s *Storage) Create(name, address, user string, port int) error {
+func (s *Storage) Create(name, address, user, pathToKey, passwordKey string, port int, authType AuthType) error {
 	return s.db.Update(func(tx *bbolt.Tx) error {
 		recordsBucket := tx.Bucket([]byte(RECORDS_BACKET))
 		if recordsBucket == nil {
@@ -93,23 +108,26 @@ func (s *Storage) Create(name, address, user string, port int) error {
 			return ConnectionExists
 		}
 
-		k := uuid.New()
+		ID := uuid.New()
 		r := Record{
-			ID:      k.String(),
-			Name:    name,
-			Address: address,
-			Port:    port,
-			User:    user,
+			ID:          ID.String(),
+			Name:        name,
+			Address:     address,
+			Port:        port,
+			User:        user,
+			AuthType:    authType,
+			PathToKey:   pathToKey,
+			PasswordKey: passwordKey,
 		}
 		v, err := json.Marshal(r)
 		if err != nil {
 			return err
 		}
-		if err := recordsBucket.Put([]byte(k.String()), v); err != nil {
+		if err := recordsBucket.Put([]byte(ID.String()), v); err != nil {
 			return err
 		}
 
-		return indexBucket.Put([]byte(name), []byte(k.String()))
+		return indexBucket.Put([]byte(name), []byte(ID.String()))
 	})
 }
 

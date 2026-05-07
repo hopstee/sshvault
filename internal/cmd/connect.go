@@ -159,7 +159,7 @@ func (c *Command) verifyHost(conn storage.Record) error {
 		return err
 	}
 
-	fp, err := utils.GetFingerprint(conn.Address)
+	fp, err := utils.GetFingerprint(conn.Port, conn.Address)
 	if err != nil {
 		slog.Error("failed to get fingerprint")
 		return err

@@ -34,8 +34,8 @@ func GetHostKey(port int, host string) (string, error) {
 	return string(out), nil
 }
 
-func GetFingerprint(host string) (string, error) {
-	cmd := exec.Command("ssh-keyscan", "-p", "22", host)
+func GetFingerprint(port int, host string) (string, error) {
+	cmd := exec.Command("ssh-keyscan", "-p", strconv.Itoa(port), host)
 
 	out, err := cmd.Output()
 	if err != nil {

@@ -212,6 +212,7 @@ func (c *Command) readPassword() (string, error) {
 		slog.Error("password cannot be empty")
 		return "", ErrEmptyPassword
 	}
+
 	fmt.Print("\nConfirm password: ")
 	confirmPasswordBytes, err := term.ReadPassword(int(os.Stdin.Fd()))
 	if err != nil {

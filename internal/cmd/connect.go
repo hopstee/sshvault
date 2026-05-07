@@ -181,7 +181,7 @@ func (c *Command) verifyHost(conn storage.Record) error {
 		return err
 	}
 
-	slog.Info("Host added.")
+	slog.Info("Host added")
 	return nil
 }
 

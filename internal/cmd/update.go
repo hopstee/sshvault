@@ -33,8 +33,6 @@ func (c *Command) updateCmd() {
 			var authType storage.AuthType
 
 			conn, err := c.storage.Find(oldName)
-			slog.Info("check database data", slog.Any("allData", conn))
-			slog.Info("check new data", slog.Any("params", p))
 			if err != nil {
 				slog.Error("failed find connection", slog.String("name", oldName))
 				return

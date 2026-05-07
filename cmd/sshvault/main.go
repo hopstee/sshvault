@@ -11,7 +11,7 @@ import (
 )
 
 const APP_NAME = "sshvault"
-const VERSION = "0.2.4"
+const VERSION = "0.2.5"
 
 func main() {
 	logger := slog.New(utils.NewPrettyHandler(slog.LevelDebug))

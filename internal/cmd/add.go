@@ -16,7 +16,7 @@ var (
 	ErrEmptyAuthParams   = errors.New("no one auth params not provided")
 )
 
-type Params struct {
+type CreateParams struct {
 	Name         string
 	Address      string
 	User         string
@@ -27,7 +27,7 @@ type Params struct {
 }
 
 func (c *Command) addCmd() {
-	p := Params{}
+	p := CreateParams{}
 	cmd := &cobra.Command{
 		Use:   "add",
 		Short: "Add an SSH connection",
@@ -37,7 +37,7 @@ func (c *Command) addCmd() {
 
 			err := c.detectAuthType(&p, &passwordKey, &pathToKey, &authType)
 			if err != nil {
-				if err := c.selectAuthType(&p, &passwordKey, &pathToKey, &authType); err != nil {
+				if err := c.selectAuthType(p.Name, &passwordKey, &pathToKey, &authType); err != nil {
 					return
 				}
 			}
@@ -59,11 +59,11 @@ func (c *Command) addCmd() {
 		},
 	}
 
-	c.setFlags(cmd, &p)
+	c.setAddFlags(cmd, &p)
 	c.Cmd.AddCommand(cmd)
 }
 
-func (c *Command) setFlags(cmd *cobra.Command, p *Params) {
+func (c *Command) setAddFlags(cmd *cobra.Command, p *CreateParams) {
 	cmd.Flags().StringVarP(
 		&p.Name,
 		"name",
@@ -93,7 +93,7 @@ func (c *Command) setFlags(cmd *cobra.Command, p *Params) {
 	cmd.Flags().IntVarP(
 		&p.Port,
 		"port",
-		"P",
+		"p",
 		22,
 		"Port",
 	)

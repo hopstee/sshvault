@@ -3,7 +3,6 @@ package storage
 import (
 	"encoding/json"
 	"errors"
-	"log/slog"
 	"time"
 
 	"github.com/google/uuid"
@@ -14,11 +13,11 @@ const RECORDS_BACKET = "records"
 const INDEX_BUCKET = "names_index"
 
 var (
-	ErrNotFound          = errors.New("record not found")
-	RecordBucketNotFound = errors.New("record bucket not found")
-	IndexBucketNotFound  = errors.New("index bucket not found")
-	ConnectionExists     = errors.New("connection with name already exists")
-	ConnectionNotExists  = errors.New("connection with name does not exist")
+	ErrNotFound             = errors.New("record not found")
+	ErrRecordBucketNotFound = errors.New("record bucket not found")
+	ErrIndexBucketNotFound  = errors.New("index bucket not found")
+	ErrConnectionExists     = errors.New("connection with name already exists")
+	ErrConnectionNotExists  = errors.New("connection with name does not exist")
 )
 
 type AuthType string
@@ -87,7 +86,7 @@ func (s *Storage) Records() ([]Record, error) {
 	err := s.db.View(func(tx *bbolt.Tx) error {
 		recordsBucket := tx.Bucket([]byte(RECORDS_BACKET))
 		if recordsBucket == nil {
-			return RecordBucketNotFound
+			return ErrRecordBucketNotFound
 		}
 
 		return recordsBucket.ForEach(func(k, v []byte) error {
@@ -107,16 +106,16 @@ func (s *Storage) Create(dto UpsertDto) error {
 	return s.db.Update(func(tx *bbolt.Tx) error {
 		recordsBucket := tx.Bucket([]byte(RECORDS_BACKET))
 		if recordsBucket == nil {
-			return RecordBucketNotFound
+			return ErrRecordBucketNotFound
 		}
 
 		indexBucket := tx.Bucket([]byte(INDEX_BUCKET))
 		if indexBucket == nil {
-			return IndexBucketNotFound
+			return ErrIndexBucketNotFound
 		}
 
 		if v := indexBucket.Get([]byte(dto.Name)); v != nil {
-			return ConnectionExists
+			return ErrConnectionExists
 		}
 
 		ID := uuid.New()
@@ -143,33 +142,33 @@ func (s *Storage) Create(dto UpsertDto) error {
 }
 
 func (s *Storage) Update(name string, dto UpsertDto) error {
-	var record Record
 	return s.db.Update(func(tx *bbolt.Tx) error {
 		recordsBucket := tx.Bucket([]byte(RECORDS_BACKET))
 		if recordsBucket == nil {
-			return RecordBucketNotFound
+			return ErrRecordBucketNotFound
 		}
 
 		indexBucket := tx.Bucket([]byte(INDEX_BUCKET))
 		if indexBucket == nil {
-			return IndexBucketNotFound
+			return ErrIndexBucketNotFound
 		}
 
 		id := indexBucket.Get([]byte(name))
 		if id == nil {
-			return ConnectionNotExists
+			return ErrConnectionNotExists
 		}
 
 		v := recordsBucket.Get(id)
 		if v == nil {
 			return ErrNotFound
 		}
+
+		var record Record
 		if err := json.Unmarshal(v, &record); err != nil {
-			slog.Error("failed unmarshal")
 			return err
 		}
 
-		r := Record{
+		updated := Record{
 			ID:          record.ID,
 			Name:        dto.Name,
 			Address:     dto.Address,
@@ -179,27 +178,24 @@ func (s *Storage) Update(name string, dto UpsertDto) error {
 			PathToKey:   dto.PathToKey,
 			PasswordKey: dto.PasswordKey,
 		}
-		if record.Name != dto.Name {
-			r.ID = uuid.New().String()
-		}
 
-		v, err := json.Marshal(r)
+		data, err := json.Marshal(updated)
 		if err != nil {
-			slog.Error("failed marshal")
-			return err
-		}
-		if err := recordsBucket.Put([]byte(r.ID), v); err != nil {
-			slog.Error("failed update record")
 			return err
 		}
 
-		if err := indexBucket.Delete([]byte(record.Name)); err != nil {
-			slog.Error("failed delete index")
+		if err := recordsBucket.Put(id, data); err != nil {
 			return err
 		}
-		if err := indexBucket.Put([]byte(dto.Name), []byte(r.ID)); err != nil {
-			slog.Error("failed update index")
-			return err
+
+		if record.Name != dto.Name {
+			if err := indexBucket.Delete([]byte(record.Name)); err != nil {
+				return err
+			}
+
+			if err := indexBucket.Put([]byte(dto.Name), id); err != nil {
+				return err
+			}
 		}
 
 		return nil
@@ -216,12 +212,12 @@ func (s *Storage) Find(name string) (Record, error) {
 
 		indexBucket := tx.Bucket([]byte(INDEX_BUCKET))
 		if indexBucket == nil {
-			return IndexBucketNotFound
+			return ErrIndexBucketNotFound
 		}
 
 		id := indexBucket.Get([]byte(name))
 		if id == nil {
-			return ConnectionNotExists
+			return ErrConnectionNotExists
 		}
 
 		v := recordBucket.Get(id)
@@ -245,12 +241,12 @@ func (s *Storage) Delete(name string) error {
 
 		indexBucket := tx.Bucket([]byte(INDEX_BUCKET))
 		if indexBucket == nil {
-			return IndexBucketNotFound
+			return ErrIndexBucketNotFound
 		}
 
 		id := indexBucket.Get([]byte(name))
 		if id == nil {
-			return ConnectionNotExists
+			return ErrConnectionNotExists
 		}
 
 		if err := recordBucket.Delete(id); err != nil {

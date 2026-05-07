@@ -195,11 +195,11 @@ func (c *Command) backfillAuth(conn *storage.Record) error {
 	var passwordKey, pathToKey string
 	var authType storage.AuthType
 
-	p := &Params{
+	p := &CreateParams{
 		Name: conn.Name,
 	}
 
-	c.selectAuthType(p, &passwordKey, &pathToKey, &authType)
+	c.selectAuthType(p.Name, &passwordKey, &pathToKey, &authType)
 
 	if err := c.storage.Update(conn.Name, storage.UpsertDto{
 		Name:        conn.Name,

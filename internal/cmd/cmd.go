@@ -35,6 +35,7 @@ func NewCommand(s *storage.Storage, k *storage.Keyring, version string) *Command
 	}
 	cmd.versionCmd(version)
 	cmd.addCmd()
+	cmd.updateCmd()
 	cmd.listCmd()
 	cmd.deleteCmd()
 	cmd.connectCmd()

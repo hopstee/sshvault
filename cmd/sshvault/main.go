@@ -7,12 +7,16 @@ import (
 
 	"github.com/hopstee/sshvault/internal/cmd"
 	"github.com/hopstee/sshvault/internal/storage"
+	"github.com/hopstee/sshvault/internal/utils"
 )
 
 const APP_NAME = "sshvault"
-const VERSION = "0.2.3"
+const VERSION = "0.2.4"
 
 func main() {
+	logger := slog.New(utils.NewPrettyHandler(slog.LevelDebug))
+	slog.SetDefault(logger)
+
 	storePath, err := getLocalStorePath(APP_NAME)
 	if err != nil {
 		slog.Error("failed to get local store path", "err", err)

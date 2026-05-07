@@ -16,7 +16,7 @@ var (
 	ErrPasswordNotIdentical = errors.New("Passwords should be identical")
 )
 
-func (c *Command) detectAuthType(p *Params, passwordKey, pathToKey *string, authType *storage.AuthType) error {
+func (c *Command) detectAuthType(p *CreateParams, passwordKey, pathToKey *string, authType *storage.AuthType) error {
 	if p.WithPassword {
 		*authType = storage.PasswordAuth
 		*passwordKey = p.Name
@@ -48,7 +48,7 @@ func (c *Command) detectAuthType(p *Params, passwordKey, pathToKey *string, auth
 	return ErrEmptyAuthParams
 }
 
-func (c *Command) selectAuthType(p *Params, passwordKey, pathToKey *string, authType *storage.AuthType) error {
+func (c *Command) selectAuthType(connectionName string, passwordKey, pathToKey *string, authType *storage.AuthType) error {
 	fmt.Println("Select authentication method:")
 	fmt.Println("1) Password")
 	fmt.Println("2) SSH key")
@@ -64,7 +64,7 @@ func (c *Command) selectAuthType(p *Params, passwordKey, pathToKey *string, auth
 
 	switch choice {
 	case 1:
-		return c.processPasswordAuthSelection(p, passwordKey, authType)
+		return c.processPasswordAuthSelection(connectionName, passwordKey, authType)
 	case 2:
 		return c.processSSHKeyAuthSelection(pathToKey, authType)
 	case 3:
@@ -77,7 +77,7 @@ func (c *Command) selectAuthType(p *Params, passwordKey, pathToKey *string, auth
 	return nil
 }
 
-func (c *Command) processPasswordAuthSelection(p *Params, passwordKey *string, authType *storage.AuthType) error {
+func (c *Command) processPasswordAuthSelection(connectionName string, passwordKey *string, authType *storage.AuthType) error {
 	*authType = storage.PasswordAuth
 
 	password, err := c.readPassword()
@@ -85,10 +85,10 @@ func (c *Command) processPasswordAuthSelection(p *Params, passwordKey *string, a
 		return err
 	}
 
-	if err := c.keyring.Set(p.Name, password); err != nil {
+	if err := c.keyring.Set(connectionName, password); err != nil {
 		return err
 	}
-	*passwordKey = p.Name
+	*passwordKey = connectionName
 
 	return nil
 }

@@ -3,6 +3,7 @@ package storage
 import (
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"time"
 
 	"github.com/google/uuid"
@@ -39,6 +40,16 @@ type Record struct {
 	PasswordKey string
 	// TODO: add tags for classifications
 	// Tags []string
+}
+
+type UpsertDto struct {
+	Name        string
+	Address     string
+	User        string
+	PathToKey   string
+	PasswordKey string
+	Port        int
+	AuthType    AuthType
 }
 
 type Storage struct {
@@ -92,7 +103,7 @@ func (s *Storage) Records() ([]Record, error) {
 	return records, err
 }
 
-func (s *Storage) Create(name, address, user, pathToKey, passwordKey string, port int, authType AuthType) error {
+func (s *Storage) Create(dto UpsertDto) error {
 	return s.db.Update(func(tx *bbolt.Tx) error {
 		recordsBucket := tx.Bucket([]byte(RECORDS_BACKET))
 		if recordsBucket == nil {
@@ -104,20 +115,20 @@ func (s *Storage) Create(name, address, user, pathToKey, passwordKey string, por
 			return IndexBucketNotFound
 		}
 
-		if v := indexBucket.Get([]byte(name)); v != nil {
+		if v := indexBucket.Get([]byte(dto.Name)); v != nil {
 			return ConnectionExists
 		}
 
 		ID := uuid.New()
 		r := Record{
 			ID:          ID.String(),
-			Name:        name,
-			Address:     address,
-			Port:        port,
-			User:        user,
-			AuthType:    authType,
-			PathToKey:   pathToKey,
-			PasswordKey: passwordKey,
+			Name:        dto.Name,
+			Address:     dto.Address,
+			Port:        dto.Port,
+			User:        dto.User,
+			AuthType:    dto.AuthType,
+			PathToKey:   dto.PathToKey,
+			PasswordKey: dto.PasswordKey,
 		}
 		v, err := json.Marshal(r)
 		if err != nil {
@@ -127,7 +138,71 @@ func (s *Storage) Create(name, address, user, pathToKey, passwordKey string, por
 			return err
 		}
 
-		return indexBucket.Put([]byte(name), []byte(ID.String()))
+		return indexBucket.Put([]byte(dto.Name), []byte(ID.String()))
+	})
+}
+
+func (s *Storage) Update(name string, dto UpsertDto) error {
+	var record Record
+	return s.db.Update(func(tx *bbolt.Tx) error {
+		recordsBucket := tx.Bucket([]byte(RECORDS_BACKET))
+		if recordsBucket == nil {
+			return RecordBucketNotFound
+		}
+
+		indexBucket := tx.Bucket([]byte(INDEX_BUCKET))
+		if indexBucket == nil {
+			return IndexBucketNotFound
+		}
+
+		id := indexBucket.Get([]byte(name))
+		if id == nil {
+			return ConnectionNotExists
+		}
+
+		v := recordsBucket.Get(id)
+		if v == nil {
+			return ErrNotFound
+		}
+		if err := json.Unmarshal(v, &record); err != nil {
+			slog.Error("failed unmarshal")
+			return err
+		}
+
+		r := Record{
+			ID:          record.ID,
+			Name:        dto.Name,
+			Address:     dto.Address,
+			Port:        dto.Port,
+			User:        dto.User,
+			AuthType:    dto.AuthType,
+			PathToKey:   dto.PathToKey,
+			PasswordKey: dto.PasswordKey,
+		}
+		if record.Name != dto.Name {
+			r.ID = uuid.New().String()
+		}
+
+		v, err := json.Marshal(r)
+		if err != nil {
+			slog.Error("failed marshal")
+			return err
+		}
+		if err := recordsBucket.Put([]byte(r.ID), v); err != nil {
+			slog.Error("failed update record")
+			return err
+		}
+
+		if err := indexBucket.Delete([]byte(record.Name)); err != nil {
+			slog.Error("failed delete index")
+			return err
+		}
+		if err := indexBucket.Put([]byte(dto.Name), []byte(r.ID)); err != nil {
+			slog.Error("failed update index")
+			return err
+		}
+
+		return nil
 	})
 }
 

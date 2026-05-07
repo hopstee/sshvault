@@ -53,6 +53,12 @@ func (c *Command) processAuth(conn storage.Record, sshArgs []string, remember bo
 	var sshCmd *exec.Cmd
 	var err error
 
+	if conn.AuthType == "" {
+		if err := c.backfillAuth(&conn); err != nil {
+			return
+		}
+	}
+
 	switch conn.AuthType {
 	case storage.PasswordAuth:
 		sshCmd, sshArgs, err = c.processPasswordAuth(conn, sshArgs)
@@ -178,4 +184,36 @@ func (c *Command) provideStdInOutErrToSSHCmd(sshCmd *exec.Cmd) {
 	sshCmd.Stdin = os.Stdin
 	sshCmd.Stdout = os.Stdout
 	sshCmd.Stderr = os.Stderr
+}
+
+func (c *Command) backfillAuth(conn *storage.Record) error {
+	var passwordKey, pathToKey string
+	var authType storage.AuthType
+
+	p := &Params{
+		Name: conn.Name,
+	}
+
+	c.selectAuthType(p, &passwordKey, &pathToKey, &authType)
+
+	slog.Info("check data before update", slog.String("passwordKey", passwordKey), slog.String("pathToKey", pathToKey), slog.Any("authType", authType))
+
+	if err := c.storage.Update(conn.Name, storage.UpsertDto{
+		Name:        conn.Name,
+		Address:     conn.Address,
+		User:        conn.User,
+		PathToKey:   pathToKey,
+		PasswordKey: passwordKey,
+		Port:        conn.Port,
+		AuthType:    authType,
+	}); err != nil {
+		slog.Error("failed to backfill connection auth data", slog.Any("error", err))
+		return err
+	}
+
+	conn.PasswordKey = passwordKey
+	conn.PathToKey = pathToKey
+	conn.AuthType = authType
+
+	return nil
 }

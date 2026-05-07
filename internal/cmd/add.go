@@ -75,7 +75,7 @@ func (c *Command) setFlags(cmd *cobra.Command, p *Params) {
 
 	cmd.Flags().StringVarP(
 		&p.Address,
-		"address",
+		"addr",
 		"a",
 		"",
 		"IP address",
@@ -100,7 +100,7 @@ func (c *Command) setFlags(cmd *cobra.Command, p *Params) {
 
 	cmd.Flags().BoolVar(
 		&p.WithPassword,
-		"with-password",
+		"with-pass",
 		false,
 		"Set password for SSH connection",
 	)

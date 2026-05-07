@@ -9,7 +9,7 @@ import (
 
 func (c *Command) deleteCmd() {
 	c.Cmd.AddCommand(&cobra.Command{
-		Use:                   "delete [name]",
+		Use:                   "del [name]",
 		Short:                 "Delete an SSH connection",
 		Args:                  cobra.ExactArgs(1),
 		DisableFlagsInUseLine: true,

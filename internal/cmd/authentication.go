@@ -44,6 +44,7 @@ func (c *Command) detectAuthType(p *Params, passwordKey, pathToKey *string, auth
 		return nil
 	}
 
+	slog.Warn("unknown auth type")
 	return ErrEmptyAuthParams
 }
 
@@ -81,7 +82,7 @@ func (c *Command) processPasswordAuthSelection(p *Params, passwordKey *string, a
 
 	password, err := c.readPassword()
 	if err != nil {
-		slog.Error("failed read password", slog.Any("error", err))
+		return err
 	}
 
 	if err := c.keyring.Set(p.Name, password); err != nil {
@@ -201,7 +202,7 @@ func (c *Command) readChoise(pathToKey *string, keys []string) error {
 }
 
 func (c *Command) readPassword() (string, error) {
-	fmt.Println("Enter password: ")
+	fmt.Print("Enter password: ")
 	passwordBytes, err := term.ReadPassword(int(os.Stdin.Fd()))
 	if err != nil {
 		slog.Error("failed to read password", slog.Any("error", err))
@@ -211,7 +212,7 @@ func (c *Command) readPassword() (string, error) {
 		slog.Error("password cannot be empty")
 		return "", ErrEmptyPassword
 	}
-	fmt.Println("Confirm password: ")
+	fmt.Print("\nConfirm password: ")
 	confirmPasswordBytes, err := term.ReadPassword(int(os.Stdin.Fd()))
 	if err != nil {
 		slog.Error("failed to read password", slog.Any("error", err))
@@ -220,6 +221,7 @@ func (c *Command) readPassword() (string, error) {
 	fmt.Println()
 
 	if string(passwordBytes) != string(confirmPasswordBytes) {
+		slog.Error("passwords does not match", slog.Any("error", err))
 		return "", ErrPasswordNotIdentical
 	}
 

@@ -22,7 +22,7 @@ var (
 func (c *Command) connectCmd() {
 	var remember bool
 	cmd := &cobra.Command{
-		Use:                   "connect [name]",
+		Use:                   "conn [name]",
 		Short:                 "Connect to an SSH connection",
 		Args:                  cobra.ExactArgs(1),
 		DisableFlagsInUseLine: true,
@@ -43,7 +43,7 @@ func (c *Command) connectCmd() {
 	cmd.Flags().BoolVar(
 		&remember,
 		"remember",
-		false,
+		true,
 		fmt.Sprintf("Add SSH key to ssh-agent for %s", SSHKeyTTLInAgent),
 	)
 	c.Cmd.AddCommand(cmd)
@@ -104,6 +104,7 @@ func (c *Command) processPasswordAuth(conn storage.Record, sshArgs []string) (*e
 
 	if !utils.HostKnown(conn.Address) {
 		if err := c.verifyHost(conn); err != nil {
+			slog.Error("failed to verify host")
 			return nil, sshArgs, err
 		}
 	}
@@ -111,10 +112,11 @@ func (c *Command) processPasswordAuth(conn storage.Record, sshArgs []string) (*e
 	sshCmd := exec.Command(
 		"sshpass",
 		append(
-			[]string{"-p", password, "ssh"},
+			[]string{"-e", "ssh"},
 			sshArgs...,
 		)...,
 	)
+	sshCmd.Env = append(os.Environ(), "SSHPASS="+password)
 
 	return sshCmd, sshArgs, nil
 }
@@ -153,11 +155,13 @@ func (c *Command) processAgentAuth(conn storage.Record, sshArgs []string) []stri
 func (c *Command) verifyHost(conn storage.Record) error {
 	key, err := utils.GetHostKey(conn.Port, conn.Address)
 	if err != nil {
+		slog.Error("failed to get host key")
 		return err
 	}
 
 	fp, err := utils.GetFingerprint(conn.Address)
 	if err != nil {
+		slog.Error("failed to get fingerprint")
 		return err
 	}
 
@@ -173,6 +177,7 @@ func (c *Command) verifyHost(conn storage.Record) error {
 	}
 
 	if err := utils.AddToKnownHosts(key); err != nil {
+		slog.Error("failed add to known hosts")
 		return err
 	}
 
@@ -195,8 +200,6 @@ func (c *Command) backfillAuth(conn *storage.Record) error {
 	}
 
 	c.selectAuthType(p, &passwordKey, &pathToKey, &authType)
-
-	slog.Info("check data before update", slog.String("passwordKey", passwordKey), slog.String("pathToKey", pathToKey), slog.Any("authType", authType))
 
 	if err := c.storage.Update(conn.Name, storage.UpsertDto{
 		Name:        conn.Name,

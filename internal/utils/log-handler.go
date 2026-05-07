@@ -36,6 +36,17 @@ func (h *PrettyHandler) Handle(_ context.Context, r slog.Record) error {
 		r.Message,
 	)
 
+	var attrs []string
+
+	r.Attrs(func(a slog.Attr) bool {
+		attrs = append(attrs, fmt.Sprintf("%s=%+v", a.Key, a.Value.Any()))
+		return true
+	})
+
+	if len(attrs) > 0 {
+		msg += " " + strings.Join(attrs, " ")
+	}
+
 	_, err := fmt.Fprintln(os.Stdout, msg)
 	return err
 }

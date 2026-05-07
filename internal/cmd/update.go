@@ -23,7 +23,6 @@ func (c *Command) updateCmd() {
 		Args:                  cobra.ExactArgs(1),
 		DisableFlagsInUseLine: true,
 		Run: func(cmd *cobra.Command, args []string) {
-			slog.Info("check args", slog.Any("list", args))
 			oldName := args[0]
 			if oldName == "" {
 				slog.Error("connection name is required")
@@ -34,7 +33,8 @@ func (c *Command) updateCmd() {
 			var authType storage.AuthType
 
 			conn, err := c.storage.Find(oldName)
-			slog.Info("check name", slog.String("name", oldName))
+			slog.Info("check database data", slog.Any("allData", conn))
+			slog.Info("check new data", slog.Any("params", p))
 			if err != nil {
 				slog.Error("failed find connection", slog.String("name", oldName))
 				return
@@ -116,7 +116,7 @@ func (c *Command) setUpdateFlags(cmd *cobra.Command, p *UpdateParams) {
 		&p.User,
 		"user",
 		"u",
-		"root",
+		"",
 		"New username",
 	)
 
@@ -124,7 +124,7 @@ func (c *Command) setUpdateFlags(cmd *cobra.Command, p *UpdateParams) {
 		&p.Port,
 		"port",
 		"p",
-		22,
+		0,
 		"Port",
 	)
 
